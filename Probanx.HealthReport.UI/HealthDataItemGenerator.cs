@@ -4,9 +4,9 @@ using Probanx.HealthReport.Models;
 
 namespace Probanx.HealthReport.UI;
 
-internal static class HealthReportGenerator
+internal static class HealthDataItemGenerator
 {
-    public static List<HealthDataItem> GenerateTestHealthData(int servicesCount, int daysCount, int dataPerDayCount,
+    public static List<HealthDataItem> Generate(int servicesCount, int daysCount, int dataPerDayCount,
         IDateTimeProvider dateTimeProvider)
     {
         var now = dateTimeProvider.OffsetNow;
@@ -38,7 +38,7 @@ internal static class HealthReportGenerator
         return healthData;
     }
 
-    public static List<HealthDataItem> GenerateTestHealthData()
+    public static List<HealthDataItem> Generate()
     {
         return
         [
