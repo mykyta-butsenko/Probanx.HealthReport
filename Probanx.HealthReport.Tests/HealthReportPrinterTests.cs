@@ -21,7 +21,7 @@ public class HealthReportPrinterTests
     public void PrintHealthReport_ShouldLogUnavailableMessage_WhenReportDataIsUnavailable()
     {
         // Arrange
-        var report = new ServiceReport("ServiceA", DateTimeOffset.UtcNow, TimeSpan.Zero, 0, 0, 0);
+        var report = new ServiceReport("ServiceA", DateTimeOffset.UtcNow, TimeSpan.Zero, 0, 0, 0, 100);
         var reports = new List<ServiceReport> { report };
 
         // Act
@@ -38,7 +38,7 @@ public class HealthReportPrinterTests
     public void PrintHealthReport_ShouldLogCorrectMessage_WhenReportDataIsAvailable()
     {
         // Arrange
-        var report = new ServiceReport("ServiceA", DateTimeOffset.UtcNow, TimeSpan.FromHours(1), 50, 30, 20);
+        var report = new ServiceReport("ServiceA", DateTimeOffset.UtcNow, TimeSpan.FromHours(1), 50, 30, 20, 0);
         var reports = new List<ServiceReport> { report };
 
         // Act
@@ -46,21 +46,22 @@ public class HealthReportPrinterTests
 
         // Assert
         _logger.Received(1).LogInformation(
-            "Service name = {serviceName}; Date = {date}; Uptime = {uptime}; UptimePercent = {uptimePercent}; UnhealthyPercent = {unhealthyPercent}; DegradedPercent = {degradedPercent}",
+            "Service name = {serviceName}; Date = {date}; Uptime = {uptime}; UptimePercent = {uptimePercent}; UnhealthyPercent = {unhealthyPercent}; DegradedPercent = {degradedPercent}; UnavailablePercent = {unavailablePercent}",
             "ServiceA",
             $"{report.Date:D}",
             "1:00:00",
             "50.00%",
             "30.00%",
-            "20.00%");
+            "20.00%",
+            "0.00%");
     }
 
     [Test]
     public void PrintHealthReport_ShouldLogMultipleMessages_WhenMultipleReportsAreProvided()
     {
         // Arrange
-        var report1 = new ServiceReport("ServiceA", DateTimeOffset.UtcNow, TimeSpan.FromHours(1), 50, 30, 20);
-        var report2 = new ServiceReport("ServiceB", DateTimeOffset.UtcNow, TimeSpan.Zero, 0, 0, 0);
+        var report1 = new ServiceReport("ServiceA", DateTimeOffset.UtcNow, TimeSpan.FromHours(1), 50, 30, 20, 0);
+        var report2 = new ServiceReport("ServiceB", DateTimeOffset.UtcNow, TimeSpan.Zero, 0, 0, 0, 100);
         var reports = new List<ServiceReport> { report1, report2, };
 
         // Act
@@ -68,13 +69,14 @@ public class HealthReportPrinterTests
 
         // Assert
         _logger.Received(1).LogInformation(
-            "Service name = {serviceName}; Date = {date}; Uptime = {uptime}; UptimePercent = {uptimePercent}; UnhealthyPercent = {unhealthyPercent}; DegradedPercent = {degradedPercent}",
+            "Service name = {serviceName}; Date = {date}; Uptime = {uptime}; UptimePercent = {uptimePercent}; UnhealthyPercent = {unhealthyPercent}; DegradedPercent = {degradedPercent}; UnavailablePercent = {unavailablePercent}",
             "ServiceA",
             $"{report1.Date:D}",
             "1:00:00",
             "50.00%",
             "30.00%",
-            "20.00%");
+            "20.00%",
+            "0.00%");
 
         _logger.Received(1).LogInformation(
             "Health data for Service name = {serviceName} for Date = {date} is Unavailable",
