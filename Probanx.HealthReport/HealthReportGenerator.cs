@@ -37,14 +37,30 @@ public class HealthReportGenerator : IHealthReportGenerator
                 if (groupedData.TryGetValue(new { Service = service, date.Date }, out var serviceHealthLogsPerDay) &&
                     serviceHealthLogsPerDay.Count != 0)
                 {
-                    healthStatus ??= serviceHealthLogsPerDay.First().Status;
-                    var (serviceReport, lastHealthStatus) = ProcessLogsPerDay(date, service, serviceHealthLogsPerDay, healthStatus.Value);
+                    var (serviceReport, lastHealthStatus) =
+                        ProcessLogsPerDay(date, service, serviceHealthLogsPerDay, healthStatus);
                     reports.Add(serviceReport);
                     healthStatus = lastHealthStatus;
                 }
                 else
                 {
-                    reports.Add(new ServiceReport(service, date, TimeSpan.Zero, 0, 0, 0));
+                    switch (healthStatus)
+                    {
+                        case HealthStatus.Healthy:
+                            reports.Add(new ServiceReport(service, date, TimeSpan.FromDays(1), 100, 0, 0, 0));
+                            break;
+                        case HealthStatus.Degraded:
+                            reports.Add(new ServiceReport(service, date, TimeSpan.FromDays(0), 0, 0, 100, 0));
+                            break;
+                        case HealthStatus.Unhealthy:
+                            reports.Add(new ServiceReport(service, date, TimeSpan.FromDays(0), 0, 100, 0, 0));
+                            break;
+                        case null:
+                            reports.Add(new ServiceReport(service, date, TimeSpan.Zero, 0, 0, 0, 100));
+                            break;
+                        default:
+                            throw new ArgumentOutOfRangeException($"Health status = {healthStatus} is not supported.");
+                    }
                 }
             }
         }
@@ -52,11 +68,11 @@ public class HealthReportGenerator : IHealthReportGenerator
         return reports.OrderBy(report => report.Date);
     }
 
-    private static (ServiceReport serviceReport, HealthStatus lastHealthStatus) ProcessLogsPerDay(
+    private static (ServiceReport serviceReport, HealthStatus? lastHealthStatus) ProcessLogsPerDay(
         DateTime date,
-        string service, 
-        List<HealthDataItem> serviceHealthLogsPerDay, 
-        HealthStatus lastHealthStatus)
+        string service,
+        List<HealthDataItem> serviceHealthLogsPerDay,
+        HealthStatus? lastHealthStatus)
     {
         var periodStart = new DateTimeOffset(date.Date);
         var periodEnd = periodStart.AddDays(1);
@@ -65,6 +81,7 @@ public class HealthReportGenerator : IHealthReportGenerator
         var healthyTime = TimeSpan.Zero;
         var unhealthyTime = TimeSpan.Zero;
         var degradedTime = TimeSpan.Zero;
+        var unavailableTime = TimeSpan.Zero;
 
         var lastTimestamp = periodStart;
         var lastStatus = lastHealthStatus;
@@ -83,6 +100,9 @@ public class HealthReportGenerator : IHealthReportGenerator
                     break;
                 case HealthStatus.Degraded:
                     degradedTime += duration;
+                    break;
+                case null:
+                    unavailableTime += duration;
                     break;
                 default:
                     throw new ArgumentOutOfRangeException($"Health status = {lastStatus} is not supported.");
@@ -105,6 +125,9 @@ public class HealthReportGenerator : IHealthReportGenerator
             case HealthStatus.Degraded:
                 degradedTime += finalDuration;
                 break;
+            case null:
+                unavailableTime += finalDuration;
+                break;
             default:
                 throw new ArgumentOutOfRangeException($"Health status = {lastStatus} is not supported.");
         }
@@ -112,9 +135,10 @@ public class HealthReportGenerator : IHealthReportGenerator
         var uptimePercent = (healthyTime.TotalSeconds / totalPeriod.TotalSeconds) * 100;
         var unhealthyPercent = (unhealthyTime.TotalSeconds / totalPeriod.TotalSeconds) * 100;
         var degradedPercent = (degradedTime.TotalSeconds / totalPeriod.TotalSeconds) * 100;
+        var unavailablePercent = (unavailableTime.TotalSeconds / totalPeriod.TotalSeconds) * 100;
 
-        return new ValueTuple<ServiceReport, HealthStatus>(
-            new ServiceReport(service, date, healthyTime, uptimePercent, unhealthyPercent, degradedPercent),
+        return new ValueTuple<ServiceReport, HealthStatus?>(
+            new ServiceReport(service, date, healthyTime, uptimePercent, unhealthyPercent, degradedPercent, unavailablePercent),
             lastStatus);
     }
 }

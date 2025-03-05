@@ -18,7 +18,7 @@ public class HealthReportPrinter : IHealthReportPrinter
         foreach (var report in reports)
         {
             if (report.Uptime == TimeSpan.Zero &&
-                report is { UptimePercent: 0, UnhealthyPercent: 0, DegradedPercent: 0 })
+                report is { UptimePercent: 0, UnhealthyPercent: 0, DegradedPercent: 0, UnavailablePercent: 100 })
             {
                 _logger.LogInformation(
                     "Health data for Service name = {serviceName} for Date = {date} is Unavailable",
@@ -28,13 +28,14 @@ public class HealthReportPrinter : IHealthReportPrinter
             else
             {
                 _logger.LogInformation(
-                    "Service name = {serviceName}; Date = {date}; Uptime = {uptime}; UptimePercent = {uptimePercent}; UnhealthyPercent = {unhealthyPercent}; DegradedPercent = {degradedPercent}",
+                    "Service name = {serviceName}; Date = {date}; Uptime = {uptime}; UptimePercent = {uptimePercent}; UnhealthyPercent = {unhealthyPercent}; DegradedPercent = {degradedPercent}; UnavailablePercent = {unavailablePercent}",
                     report.ServiceName,
                     $"{report.Date:D}",
                     $"{report.Uptime:g}",
                     $"{report.UptimePercent:N}%",
                     $"{report.UnhealthyPercent:N}%",
-                    $"{report.DegradedPercent:N}%");
+                    $"{report.DegradedPercent:N}%",
+                    $"{report.UnavailablePercent:N}%");
             }
         }
     }

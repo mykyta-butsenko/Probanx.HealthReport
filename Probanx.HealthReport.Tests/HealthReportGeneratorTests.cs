@@ -41,8 +41,7 @@ public class HealthReportGeneratorTests
         // Arrange
         var healthData = new List<HealthDataItem>
         {
-            // Now is 2025-03-03 18:00:00.
-            // All the timespans and percentages are calculated for 24-hour period (00:00:00-23:59:59) of every day.
+            // Before 2025-03-03 16:00:00, ServiceA didn't have any status (health data for it is Unavailable)
             new("ServiceA", _now.AddHours(-2), HealthStatus.Unhealthy), // At 2025-03-03 16:00:00 ServiceA was Unhealthy
             new("ServiceA", _now.AddHours(-1), HealthStatus.Healthy), // Starting from 2025-03-03 17:00:00 ServiceA was Healthy
         };
@@ -55,8 +54,9 @@ public class HealthReportGeneratorTests
         var report = result.First();
         report.ServiceName.Should().Be("ServiceA");
         report.Date.Date.Should().Be(_now.Date);
+        report.UnavailablePercent.Should().Be((double)16 / 24 * 100); // 16 hours out of 24
+        report.UnhealthyPercent.Should().Be((double)1 / 24 * 100); // 1 hour out of 24
         report.UptimePercent.Should().Be((double)7 / 24 * 100); // 7 hours out of 24
-        report.UnhealthyPercent.Should().Be((double)17 / 24 * 100); // 17 hours out of 24
         report.DegradedPercent.Should().Be(0);
     }
 
@@ -66,8 +66,7 @@ public class HealthReportGeneratorTests
         // Arrange
         var healthData = new List<HealthDataItem>
         {
-            // Now is 2025-03-03 18:00:00.
-            // All the timespans and percentages are calculated for 24-hour period (00:00:00-23:59:59) of every day.
+            // Before 2025-03-01 16:00:00, ServiceA didn't have any status (health data for it is Unavailable)
             new("ServiceA", _now.AddDays(-2).AddHours(-2), HealthStatus.Healthy),
             new("ServiceA", _now.AddDays(-2).AddHours(-1), HealthStatus.Degraded),
             new("ServiceB", _now.AddDays(-1).AddHours(-2), HealthStatus.Unhealthy),
@@ -85,17 +84,32 @@ public class HealthReportGeneratorTests
         serviceAReports.Should().HaveCount(3);
         serviceBReports.Should().HaveCount(3);
 
-        var emptyServiceAReports = result.Where(report =>
-            report.ServiceName == "ServiceA" && report.Uptime == TimeSpan.Zero &&
-            report is { UptimePercent: 0, UnhealthyPercent: 0, DegradedPercent: 0 }).ToList();
-        var emptyServiceBReports = result.Where(report =>
-            report.ServiceName == "ServiceB" && report.Uptime == TimeSpan.Zero &&
-            report is { UptimePercent: 0, UnhealthyPercent: 0, DegradedPercent: 0 }).ToList();
+        var firstServiceAReport = serviceAReports[0];
+        firstServiceAReport.Date.Date.Should().Be(_now.AddDays(-2).Date);
+        firstServiceAReport.UnavailablePercent.Should().Be((double)16 / 24 * 100); // 16 hours out of 24
+        firstServiceAReport.UptimePercent.Should().Be((double)1 / 24 * 100); // 1 hour out of 24
+        firstServiceAReport.DegradedPercent.Should().Be((double)7 / 24 * 100); // 1 hour out of 24
 
-        emptyServiceAReports.Should().HaveCount(2); // For 2025-03-02 and 2025-03-03 (today)
-        emptyServiceBReports.Should().HaveCount(2); // For 2025-03-01 and 2025-03-03 (today)
+        var secondServiceAReport = serviceAReports[1];
+        secondServiceAReport.Date.Date.Should().Be(_now.AddDays(-1).Date);
+        secondServiceAReport.DegradedPercent.Should().Be(100); // Since the last status was Degraded, the whole day is Degraded
 
-        emptyServiceAReports.Should().Contain(report => report.Date.Date == _now.AddDays(-1).Date || report.Date.Date == _now.Date);
-        emptyServiceBReports.Should().Contain(report => report.Date.Date == _now.AddDays(-2).Date || report.Date.Date == _now.Date);
+        var thirdServiceAReport = serviceAReports[2];
+        thirdServiceAReport.Date.Date.Should().Be(_now.Date);
+        thirdServiceAReport.DegradedPercent.Should().Be(100); // Since the last status was Degraded, the whole day is Degraded
+
+        var firstServiceBReport = serviceBReports[0];
+        firstServiceBReport.Date.Date.Should().Be(_now.AddDays(-2).Date);
+        firstServiceBReport.UnavailablePercent.Should().Be(100); // The health data for this day is missing, so the whole day is Unavailable
+
+        var secondServiceBReport = serviceBReports[1];
+        secondServiceBReport.Date.Date.Should().Be(_now.AddDays(-1).Date);
+        secondServiceBReport.UnavailablePercent.Should().Be((double)16 / 24 * 100); // 16 hours out of 24
+        secondServiceBReport.UnhealthyPercent.Should().Be((double)1 / 24 * 100); // 1 hour out of 24
+        secondServiceBReport.UptimePercent.Should().Be((double)7 / 24 * 100); // 7 hours out of 24
+
+        var thirdServiceBReport = serviceBReports[2];
+        thirdServiceBReport.Date.Date.Should().Be(_now.Date);
+        thirdServiceBReport.UptimePercent.Should().Be(100); // Since the last status was Healthy, the whole day is Healthy
     }
 }
