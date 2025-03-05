@@ -55,8 +55,8 @@ public class HealthReportGeneratorTests
         var report = result.First();
         report.ServiceName.Should().Be("ServiceA");
         report.Date.Date.Should().Be(_now.Date);
-        report.UptimePercent.Should().Be(37.5);
-        report.UnhealthyPercent.Should().Be(62.5);
+        report.UptimePercent.Should().Be((double)7 / 24 * 100); // 7 hours out of 24
+        report.UnhealthyPercent.Should().Be((double)17 / 24 * 100); // 17 hours out of 24
         report.DegradedPercent.Should().Be(0);
     }
 

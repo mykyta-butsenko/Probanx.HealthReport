@@ -19,3 +19,4 @@ var reportPrinter = serviceProvider.GetRequiredService<IHealthReportPrinter>();
 var healthData = HealthDataItemGenerator.Generate();
 var reports = reportGenerator.CreateHealthReport(healthData, pastDaysCount).ToList();
 reportPrinter.PrintHealthReport(reports);
+Console.ReadLine();
